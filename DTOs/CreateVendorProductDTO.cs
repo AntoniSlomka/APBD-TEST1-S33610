@@ -11,6 +11,6 @@ namespace APBD_TEST_TEMPLATE.DTOs
         public int Amount { get; set; }
 
         [Required]
-        public decimal PricePerUnti { get; set; }
+        public decimal PricePerUnit { get; set; }
     }
 }

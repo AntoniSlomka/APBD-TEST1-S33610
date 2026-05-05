@@ -1,5 +1,5 @@
 ﻿using APBD_TEST_TEMPLATE.DTOs;
-using APBD_TEST_TEMPLATE.Exceptions;
+using APBD_TEST_TEMPLATE.Excpetions;
 using Microsoft.Data.SqlClient;
 using System.Data.SqlTypes;
 using System.Globalization;
@@ -108,7 +108,7 @@ namespace APBD_TEST_TEMPLATE.Repositories
                 Products = productsById.Values.ToList(),
             };
         }
-        public async Task CreateVendorAsync(string Code, CreateVendorDTO request)
+        public async Task CreateVendorAsync(CreateVendorDTO request)
         {
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
@@ -126,11 +126,11 @@ namespace APBD_TEST_TEMPLATE.Repositories
                 connection,
                 transaction))
                 {
-                    vendorCheck.Parameters.AddWithValue("@Code", Code);
+                    vendorCheck.Parameters.AddWithValue("@Code", request.Code);
                     var exists = await vendorCheck.ExecuteScalarAsync();
                     if (exists is not null)
                     {
-                        throw new SqlAlreadyFilledException($"Customer with id {Code} already exists.");
+                        throw new AlreadyExistsException($"Customer with id {request.Code} already exists.");
                     }
                 }
 
@@ -149,14 +149,41 @@ namespace APBD_TEST_TEMPLATE.Repositories
                         var exists = await productCheck.ExecuteScalarAsync();
                         if (exists is null)
                         {
-                            throw new ($"Customer with id {Code} already exists.");
+                            throw new NotFoundException($"Product with ID: {product.Id} not found");
                         }
                     }
                 }
 
+                await using (var VendorCommand = new SqlCommand(
+                    """
+                    INSERT INTO Vendors (Code, Name) 
+                    VALUES (@Code, @Name);
+                    """, connection, transaction))
+                {
+                    VendorCommand.Parameters.AddWithValue("@Code", request.Code);
+                    VendorCommand.Parameters.AddWithValue("@Name", request.Name);
 
+                    await VendorCommand.ExecuteNonQueryAsync();
+                }
 
+                foreach (var product in request.Products)
+                {
+                    await using (var productsCommand = new SqlCommand(
+                    """
+                    INSERT INTO VendorProducts (ProductId, VendorCode, Amount, PricePerUnit)
+                    VALUES (@ProductId, @VendorCode, @Amount, @PricePerUnit);
+                    """, connection, transaction))
+                    {
+                        productsCommand.Parameters.AddWithValue("@ProductId", product.Id);
+                        productsCommand.Parameters.AddWithValue("@VendorCode", request.Code);
+                        productsCommand.Parameters.AddWithValue("@Amount", product.Amount);
+                        productsCommand.Parameters.AddWithValue("@PricePerUnit", product.PricePerUnit);
 
+                        await productsCommand.ExecuteNonQueryAsync();
+                    }
+                }
+
+                await transaction.CommitAsync();
             }
             catch
             {

@@ -17,6 +17,11 @@ namespace APBD_TEST_TEMPLATE.Services
             return _repository.GetVendorAsync(Code);
         }
 
+        public Task CreateVendor(CreateVendorDTO request)
+        {
+            return _repository.CreateVendorAsync(request);
+        }
+
     }
 
 }

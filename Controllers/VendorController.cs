@@ -1,4 +1,6 @@
-﻿using APBD_TEST_TEMPLATE.Services;
+﻿using APBD_TEST_TEMPLATE.DTOs;
+using APBD_TEST_TEMPLATE.Excpetions;
+using APBD_TEST_TEMPLATE.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace APBD_TEST_TEMPLATE.Controllers
@@ -24,6 +26,25 @@ namespace APBD_TEST_TEMPLATE.Controllers
             }
 
             return Ok(vendor);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateVendor([FromBody] CreateVendorDTO request)
+        {
+            try
+            {
+                await _vendorService.CreateVendor(request);
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (AlreadyExistsException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            return CreatedAtAction(nameof(GetVendor), new { request.Code }, null);
         }
 
     }
